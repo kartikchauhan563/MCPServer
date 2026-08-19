@@ -28,3 +28,5 @@ services:
         sync: false
       - key: EXCEL_FILE
         value: data/workbook.xlsx
+      - key: EXCEL_SHARE_URL
+        sync: false

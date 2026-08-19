@@ -17,6 +17,12 @@ export function getWorkbookPath(): string {
   return path.isAbsolute(rel) ? rel : path.resolve(process.cwd(), rel);
 }
 
+/** Optional SharePoint / web link to the workbook users should open after updates. */
+export function getExcelShareUrl(): string | null {
+  const url = process.env.EXCEL_SHARE_URL?.trim();
+  return url || null;
+}
+
 let queue: Promise<unknown> = Promise.resolve();
 
 function serialize<T>(task: () => Promise<T>): Promise<T> {
@@ -85,6 +91,7 @@ export async function getInfo() {
     const wb = await loadWorkbook();
     return {
       file: filePath,
+      shareUrl: getExcelShareUrl(),
       exists,
       sheets: wb.worksheets.map((w) => ({
         name: w.name,

@@ -1,6 +1,10 @@
 import { Router, type Request, type Response, type NextFunction } from 'express';
 
+import fs from 'node:fs';
+
 import { getAgentCatalog } from '../agents/catalog.js';
+import * as excel from '../agents/excel/domain.js';
+import { getExcelShareUrl, getWorkbookPath } from '../agents/excel/domain.js';
 import * as docs from '../agents/mongo/domain.js';
 import { isMongoConfigured } from '../shared/db/client.js';
 import { extractApiKey, getConfiguredApiKey, requireApiKey } from './auth.js';
@@ -34,6 +38,10 @@ export function createApiRouter(): Router {
       mongoConfigured: isMongoConfigured(),
       authRequired: Boolean(getConfiguredApiKey()),
       llm: isLlmConfigured() ? 'llm' : 'rules',
+      excel: {
+        file: getWorkbookPath(),
+        shareUrl: getExcelShareUrl(),
+      },
     });
   });
 
@@ -107,6 +115,28 @@ export function createApiRouter(): Router {
 
   router.get('/agents', (_req, res) => {
     res.json({ agents: getAgentCatalog() });
+  });
+
+  /** Metadata about the workbook the Excel agent actually edits. */
+  router.get(
+    '/excel/info',
+    asyncHandler(async (_req, res) => {
+      res.json(await excel.getInfo());
+    }),
+  );
+
+  /** Downloads the live .xlsx the agent edits, so users see their real data. */
+  router.get('/excel/download', (_req, res) => {
+    const filePath = getWorkbookPath();
+    if (!fs.existsSync(filePath)) {
+      res.status(404).json({ error: 'Workbook has not been created yet. Add data first.' });
+      return;
+    }
+    res.download(filePath, 'workbook.xlsx', (error) => {
+      if (error && !res.headersSent) {
+        res.status(500).json({ error: error.message });
+      }
+    });
   });
 
   router.get('/agent', (_req, res) => {

@@ -22,6 +22,8 @@ export type AgentDefinition = {
   name: string;
   description: string;
   toolsPrefix: string;
+  /** Optional openable link (e.g. SharePoint Excel workbook). */
+  link?: string | null;
 };
 
 export type AgentTool = {
