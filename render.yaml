@@ -5,10 +5,12 @@ services:
     runtime: node
     plan: free
     buildCommand: npm install
-    startCommand: npm run api
+    startCommand: npm start
     envVars:
       - key: NODE_ENV
         value: production
+      - key: NPM_CONFIG_PRODUCTION
+        value: "false"
       - key: CORS_ORIGIN
         value: "*"
       - key: MONGODB_URI

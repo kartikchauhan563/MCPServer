@@ -1,4 +1,5 @@
 import 'dotenv/config';
 
-// Back-compat entry: Cursor / npm start still work.
-import './mcp/stdio.js';
+// Prefer `npm start` (tsx src/http/listen.ts) on Render.
+// This file is a thin alias for local `node --import tsx src/index.ts`.
+await import('./http/listen.ts');
