@@ -1,0 +1,10 @@
+{
+  "mcpServers": {
+    "demo-mcp-server": {
+      "command": "npx",
+      "args": ["tsx", "src/mcp/stdio.ts"],
+      "cwd": "${workspaceFolder}",
+      "envFile": "${workspaceFolder}/.env"
+    }
+  }
+}

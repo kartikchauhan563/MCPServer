@@ -1,0 +1,27 @@
+# Expose as Web Service on Render: https://render.com
+services:
+  - type: web
+    name: mcp-server
+    runtime: node
+    plan: free
+    buildCommand: npm install
+    startCommand: npm run api
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: CORS_ORIGIN
+        value: "*"
+      - key: MONGODB_URI
+        sync: false
+      - key: MONGODB_DB
+        value: demo_mcp
+      - key: CLIENT_API_KEY
+        sync: false
+      - key: LLM_API_KEY
+        sync: false
+      - key: LLM_API_URL
+        sync: false
+      - key: LLM_MODEL
+        sync: false
+      - key: EXCEL_FILE
+        value: data/workbook.xlsx

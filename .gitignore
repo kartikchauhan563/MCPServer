@@ -1,0 +1,10 @@
+node_modules/
+web/
+dist/
+data/*.xlsx
+*.log
+.DS_Store
+.env
+.env.local
+.env.*.local
+!.env.example
