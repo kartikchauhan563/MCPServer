@@ -2,7 +2,15 @@ import dns from 'node:dns';
 
 import { MongoClient, type Db } from 'mongodb';
 
-dns.setServers(['8.8.8.8', '1.1.1.1']);
+/**
+ * Corporate networks often break mongodb+srv SRV lookups, so public resolvers
+ * can be opted into via MONGODB_DNS_SERVERS. Managed hosts (Render) must keep
+ * their own resolver — forcing external DNS there can hang every request.
+ */
+const dnsServers = process.env.MONGODB_DNS_SERVERS?.trim();
+if (dnsServers) {
+  dns.setServers(dnsServers.split(',').map((s) => s.trim()).filter(Boolean));
+}
 dns.setDefaultResultOrder('ipv4first');
 
 let client: MongoClient | null = null;
@@ -12,20 +20,27 @@ export function getDefaultDbName(): string {
   return process.env.MONGODB_DB?.trim() || 'demo_mcp';
 }
 
+export function isMongoConfigured(): boolean {
+  return Boolean(process.env.MONGODB_URI?.trim());
+}
+
 export async function getClient(): Promise<MongoClient> {
   const uri = process.env.MONGODB_URI?.trim();
   if (!uri) {
     throw new Error(
-      'MONGODB_URI is not set. Add it to .env or pass it via the server env.',
+      'MONGODB_URI is not set. Add it to .env or the host environment variables.',
     );
   }
 
   if (client) return client;
   if (connecting) return connecting;
 
+  const timeout = Number(process.env.MONGODB_TIMEOUT_MS || 8000);
+
   connecting = (async () => {
     const next = new MongoClient(uri, {
-      serverSelectionTimeoutMS: 10_000,
+      serverSelectionTimeoutMS: timeout,
+      connectTimeoutMS: timeout,
     });
     await next.connect();
     client = next;

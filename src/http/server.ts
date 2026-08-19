@@ -7,6 +7,7 @@ import { createMcpHandler } from '@modelcontextprotocol/server';
 import { getAgentCatalog } from '../agents/catalog.js';
 import { createMcpServer } from '../mcp/createMcpServer.js';
 import { extractApiKey, getConfiguredApiKey } from './auth.js';
+import { isWildcardHost, resolveHost } from './host.js';
 import { createApiRouter } from './routes.js';
 
 function parseCorsOrigins(): boolean | string | string[] {
@@ -16,18 +17,13 @@ function parseCorsOrigins(): boolean | string | string[] {
 }
 
 export function createHttpApp() {
-  const host =
-    process.env.HTTP_HOST?.trim() ||
-    (process.env.RENDER || process.env.NODE_ENV === 'production' ? '0.0.0.0' : '127.0.0.1');
+  const host = resolveHost();
+  const wildcard = isWildcardHost(host);
 
   const app = createMcpExpressApp({
     host,
-    allowedHosts:
-      host === '0.0.0.0' || host === '::'
-        ? undefined
-        : [host, 'localhost', '127.0.0.1'].filter(Boolean),
-    allowedOrigins:
-      host === '0.0.0.0' || host === '::' ? undefined : ['localhost', '127.0.0.1'],
+    allowedHosts: wildcard ? undefined : [host, 'localhost', '127.0.0.1'],
+    allowedOrigins: wildcard ? undefined : ['localhost', '127.0.0.1'],
   });
 
   app.use(
@@ -46,6 +42,7 @@ export function createHttpApp() {
       endpoints: {
         login: 'POST /api/login',
         health: 'GET /api/health',
+        dbHealth: 'GET /api/health/db',
         agents: 'GET /api/agents',
         naturalLanguage: 'POST /api/agent',
         rest: '/api/*',

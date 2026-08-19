@@ -102,6 +102,8 @@ export async function runWithLlm(prompt: string): Promise<AgentOutcome> {
   const maxTurns = 6;
 
   for (let turn = 0; turn < maxTurns; turn++) {
+    // Without a deadline an unreachable endpoint (e.g. an intranet LLM URL used
+    // from a cloud host) leaves the HTTP request hanging indefinitely.
     const response = await fetch(chatUrl, {
       method: 'POST',
       headers: {
@@ -109,6 +111,7 @@ export async function runWithLlm(prompt: string): Promise<AgentOutcome> {
         Authorization: `Bearer ${apiKey}`,
       },
       body: JSON.stringify({ model, messages, tools, temperature: 0 }),
+      signal: AbortSignal.timeout(Number(process.env.LLM_TIMEOUT_MS || 30_000)),
     });
 
     if (!response.ok) {

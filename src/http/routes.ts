@@ -2,6 +2,7 @@ import { Router, type Request, type Response, type NextFunction } from 'express'
 
 import { getAgentCatalog } from '../agents/catalog.js';
 import * as docs from '../agents/mongo/domain.js';
+import { isMongoConfigured } from '../shared/db/client.js';
 import { extractApiKey, getConfiguredApiKey, requireApiKey } from './auth.js';
 import { isLlmConfigured, runAgent } from '../orchestrator/run.js';
 
@@ -22,17 +23,36 @@ function param(value: string | string[] | undefined, name: string): string {
 export function createApiRouter(): Router {
   const router = Router();
 
-  /** Public health — any React app can ping without a key. */
+  /**
+   * Public liveness — must never touch Mongo, otherwise an unreachable cluster
+   * makes the whole service look dead to platform health checks.
+   */
+  router.get('/health', (_req, res) => {
+    res.json({
+      status: 'ok',
+      uptimeSeconds: Math.round(process.uptime()),
+      mongoConfigured: isMongoConfigured(),
+      authRequired: Boolean(getConfiguredApiKey()),
+      llm: isLlmConfigured() ? 'llm' : 'rules',
+    });
+  });
+
+  /** Public readiness — actually pings Mongo, with a bounded response. */
   router.get(
-    '/health',
+    '/health/db',
     asyncHandler(async (_req, res) => {
-      const ping = await docs.ping();
-      res.json({
-        status: 'ok',
-        mongo: ping,
-        authRequired: Boolean(getConfiguredApiKey()),
-        llm: isLlmConfigured() ? 'llm' : 'rules',
-      });
+      if (!isMongoConfigured()) {
+        res.status(503).json({ status: 'error', error: 'MONGODB_URI is not set' });
+        return;
+      }
+      try {
+        res.json({ status: 'ok', mongo: await docs.ping() });
+      } catch (error) {
+        res.status(503).json({
+          status: 'error',
+          error: error instanceof Error ? error.message : String(error),
+        });
+      }
     }),
   );
 
